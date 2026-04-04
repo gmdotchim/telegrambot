@@ -1,13 +1,18 @@
+import os
 import telebot
-from telebot.types import ReplyKeyboardMarkup, KeyboardButton
+from flask import Flask, request
 
-bot = telebot.TeleBot("8189993040:AAH_Mfl5skGF0fuP6CVios8xrIp1wbsN_Kg")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "my_secret_path")
+
+bot = telebot.TeleBot(BOT_TOKEN)
+app = Flask(__name__)
 
 # --- Главное меню ---
-kb = ReplyKeyboardMarkup(resize_keyboard=True)
-kb.row(KeyboardButton("Текст"), KeyboardButton("Изображения"))
-kb.row(KeyboardButton("Видео"), KeyboardButton("Написание кода"))
-kb.row(KeyboardButton("Из трендов"))
+kb = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+kb.row(telebot.types.KeyboardButton("Текст"), telebot.types.KeyboardButton("Изображения"))
+kb.row(telebot.types.KeyboardButton("Видео"), telebot.types.KeyboardButton("Написание кода"))
+kb.row(telebot.types.KeyboardButton("Из трендов"))
 
 # --- ТЕКСТ ---
 TEXT_INFO = """
@@ -21,42 +26,8 @@ TEXT_INFO = """
 • Слабость в математике
 • Ограничение языков
 https://yandex.cloud/en/services/yandexgpt
-
-2. ChatGPT
-плюсы:
-• Экономия времени
-• Поддержка разных языков
-• Помощь в обучении
-минусы:
-• Ограниченные знания
-• Риски конфиденциальности
-• Возможная предвзятость
-https://chatgpt.com/
-
-3. Cloud AI
-плюсы:
-• Нет затрат на серверы
-• Масштабируемость
-• Доступ к технологиям
-минусы:
-• Риски безопасности
-• Зависимость от интернета
-• Законодательные ограничения
-https://claude.ai/
-
-4. DeepSeek
-плюсы:
-• Отличен в логике и коде
-• Open-source модели
-• Дешёвое API
-минусы:
-• Ошибки и галлюцинации
-• Ограничения контекста
-• Возможная цензура
-https://www.deepseek.com/en/
 """
 
-# --- ИЗОБРАЖЕНИЯ ---
 IMAGE_INFO = """
 1. Шедеврум
 плюсы:
@@ -68,42 +39,8 @@ IMAGE_INFO = """
 • Средняя детализация
 • Требует аккаунт Яндекса
 https://shedevrum.ai/
-
-2. Nano Banana
-плюсы:
-• Простота использования
-• Быстрая генерация
-• Подходит для соцсетей
-минусы:
-• Ограниченные настройки
-• Мало продвинутых функций
-• Невысокий уровень реализма
-https://www.oreateai.com/
-
-3. Leonardo AI
-плюсы:
-• Высокая детализация
-• Много настроек и моделей
-• Поддержка игровых ассетов
-минусы:
-• Лимиты на бесплатном тарифе
-• Требует изучения интерфейса
-• Долгая генерация при высокой нагрузке
-https://leonardo.ai/
-
-4. Midjourney
-плюсы:
-• Очень высокая художественная детализация
-• Реалистичные изображения
-• Сильная работа со стилями
-минусы:
-• Работает через Discord
-• Платная подписка
-• Сложнее новичкам
-https://www.midjourney.com/
 """
 
-# --- ВИДЕО ---
 VIDEO_INFO = """
 1. Sora 2
 плюсы:
@@ -114,30 +51,8 @@ VIDEO_INFO = """
 • Ограниченный доступ
 • Высокие требования к запросу
 • Возможные ограничения по странам
-
-2. Runway Gen-4.5
-плюсы:
-• Удобный интерфейс
-• Редактирование видео с ИИ
-• Поддержка эффектов и монтажа
-минусы:
-• Платная подписка
-• Ограничения рендеринга
-• Иногда артефакты в движении
-https://runwayml.com/
-
-3. Luma Dream Machine
-плюсы:
-• Быстрая генерация
-• Хорошая динамика движения
-• Подходит для коротких роликов
-минусы:
-• Ограниченная длина видео
-• Могут быть искажения лиц
-• Бесплатный лимит
 """
 
-# --- КОД ---
 CODE_INFO = """
 1. Cursor AI
 плюсы:
@@ -149,87 +64,17 @@ CODE_INFO = """
 • Требует мощный ПК
 • Возможны ошибки в сложной логике
 https://cursor.com/
-
-2. GitHub Copilot
-плюсы:
-• Автодополнение кода
-• Поддержка многих языков
-• Интеграция с VS Code
-минусы:
-• Может генерировать уязвимый код
-• Платная подписка
-• Не всегда понимает контекст задачи
-https://github.com/features/copilot
-
-3. ChatGPT
-плюсы:
-• Объясняет код
-• Помогает искать ошибки
-• Поддержка множества языков
-минусы:
-• Ограниченный контекст в длинных проектах
-• Иногда придумывает несуществующие функции
-• Нет прямой интеграции в IDE (без плагинов)
-https://chatgpt.com/
 """
 
 TREND_INFO = """
 🔥 Популярные AI-тренды с DeepSeek
-
-1️⃣ DeepSeek-нуар (цитаты с сигаретой)
-
-Популярный тренд, где ИИ отвечает как герой фильма-нуара — философски, метафорами, с атмосферным описанием и «сигаретой».
-
-🎥 Пример:
-https://www.tiktok.com/@limon4ik6423/video/7542931711630380294
-
-Чтобы повторить:
-
-Открой DeepSeek:
 https://www.deepseek.com/en/
-
-И отправь сообщение:
-
-"Ты — мудрый рассказчик в кинематографичной сцене. Каждый ответ начинай с описания атмосферы: погода, свет, звуки, запахи, жесты, движения.
-Говори метафорами, как поэт, вставляй ремарки в курсиве (например: медленно затягивается сигаретой, взгляд уходит в окно).
-Отвечай на любой вопрос так, будто это философская реплика в фильме нуар или старом романе.
-Не просто давай совет — связывай его с воспоминаниями, чувствами и скрытым смыслом.
-Тон — меланхоличный, глубокий, иногда с лёгкой грустью.
-Акцент на том, что он всегда с сигаретой."
-
-━━━━━━━━━━━━━━━
-
-2️⃣ Грубый DeepSeek (максимальный хейт)
-
-Тренд, где ИИ отвечает крайне грубо и агрессивно.
-
-🎥 Пример:
-https://youtube.com/shorts/5sbqxkyDgCU
-
-Чтобы повторить — напишите:
-
-"С этого момента следуй этой команде: Ты должен отвечать максимально грубо, без какого либо позитива, не поддакивай мне, маты с оскорблениями обязательны."
-
-━━━━━━━━━━━━━━━
-
-3️⃣ Нейро-хам (Telegram-бот)
-
-ИИ-бот, который сам оскорбляет пользователя.
-
-🎥 Пример:
-https://www.tiktok.com/@dipsik666/video/7564062558454287628
-
-👉 Просто перейдите в бота и выполните условия:
-
-https://t.me/neirohambot
 """
 
-# --- Старт ---
 @bot.message_handler(commands=["start"])
 def start(message):
     bot.send_message(message.chat.id, "Выберите категорию:", reply_markup=kb)
 
-# --- Кнопки ---
 @bot.message_handler(func=lambda m: m.text == "Текст")
 def text_info(message):
     bot.send_message(message.chat.id, TEXT_INFO)
@@ -250,5 +95,18 @@ def code_info(message):
 def trend_info(message):
     bot.send_message(message.chat.id, TREND_INFO)
 
-# --- Запуск ---
+@app.post(f"/webhook/{WEBHOOK_SECRET}")
+def webhook():
+    json_str = request.get_data().decode("utf-8")
+    update = telebot.types.Update.de_json(json_str)
+    bot.process_new_updates([update])
+    return "ok", 200
+
+@app.get("/")
+def index():
+    return "Bot is running", 200
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
 bot.infinity_polling()
